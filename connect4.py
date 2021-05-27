@@ -107,9 +107,12 @@ class Board():
         Args:
             player (int): the player number 1 or 2
         '''
+        # find the center of the circle
         x_center = 50 + 100*self.most_recent_drop[1]
         y_center = 50 + 100*self.most_recent_drop[0]
+        # yellowish for player 1 and reddish for player 2
         color = [250, 255, 92] if player == 1 else [230, 69, 69]
+        # draw the circle
         pygame.draw.circle(self.screen, color, (x_center, y_center), 45)
 
 
@@ -143,10 +146,21 @@ def turn(board, player, screen):
 
 
 def draw_board(rows, columns, square_size, screen):
+    '''This function draws the connect4 board to set up the game
+    
+    Args:
+        rows (int): the number of rows to draw
+        columns (int): the number of columns to draw
+        square_size (int): the size of a square
+        screen (pygame.Screen): a pygame screen
+    '''
+    # draw the matrix
     for c in range(columns):
         for r in range(rows):
+            # set up a rectange
             rect = pygame.Rect(c*square_size, r*square_size, (c+1)*square_size, (r+1)*square_size)
             pygame.draw.rect(screen, [69, 69, 69], rect)
+            # this is an ugly draw statement that draws a black circle in the middle of each square
             pygame.draw.circle(screen, [0, 0, 0], (int((c*square_size) + (square_size/2)), int((r*square_size) + (square_size/2))), (square_size/2 - 5))
 
 def main():
@@ -161,12 +175,14 @@ def main():
     screen = pygame.display.set_mode(size)
     board = Board(screen)
 
+    # draw the board
     draw_board(rows, columns, square_size, screen)
 
-    game_over = False
     # run pygame
     player = 1
+    game_over = False
     while not game_over:
+        # check for events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -185,8 +201,10 @@ def main():
                 if board_state == 2:
                     print(f'Drawn')
                     game_over = True
-                player = total - player
-        pygame.display.flip()
+                player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+
+        pygame.display.flip()           # update display
+    # once game over sleep for a bit then quit
     time.sleep(2)
     sys.exit()
 
