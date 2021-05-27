@@ -2,13 +2,20 @@
 # Author: Caleb Bitting
 # Date: 05/25/2021
 
+import pygame
 import unittest
 from connect4 import *
 
 class TestBoardStates(unittest.TestCase):
 
     def setUp(self):
-        self.board = Board()
+        pygame.init()
+        square_size = 100
+        columns = 7
+        rows = 6
+        size = (columns*square_size, rows*square_size)
+        self.screen = pygame.display.set_mode(size)
+        self.board = Board(self.screen)
 
     def test_drop_success(self):
         # success
@@ -29,7 +36,7 @@ class TestBoardStates(unittest.TestCase):
                 # fill in the winning four
                 for k in range(4):
                     zeros[start + 7*k] = 1
-                board = Board.from_list(zeros)
+                board = Board.from_list(zeros, self.screen)
                 # make sure that algorithm marks a win
                 expected = board.won(row, column, 1)        # all of these should be a win
                 self.assertEqual(expected, 1, f'Board:\n{board}')
@@ -43,7 +50,7 @@ class TestBoardStates(unittest.TestCase):
                 # fill in the winning four
                 for k in range(start, start+4):
                     zeros[k] = 1
-                board = Board.from_list(zeros)
+                board = Board.from_list(zeros, self.screen)
                 # make sure that algorithm marks a win
                 expected = board.won(row, column, 1)        # all of these should be a win
                 self.assertEqual(expected, 1, f'Board:\n{board}')
@@ -57,7 +64,7 @@ class TestBoardStates(unittest.TestCase):
                 # fill in the winning four
                 for k in range(4):
                     zeros[start - 6*k] = 1
-                board = Board.from_list(zeros)
+                board = Board.from_list(zeros, self.screen)
                 # make sure that algorithm marks a win
                 expected = board.won(row, column, 1)        # all of these should be a win
                 self.assertEqual(expected, 1, f'Board:\n{board}')
@@ -71,7 +78,7 @@ class TestBoardStates(unittest.TestCase):
                 # fill in the winning four
                 for k in range(4):
                     zeros[start - 8*k] = 1
-                board = Board.from_list(zeros)
+                board = Board.from_list(zeros, self.screen)
                 # make sure that algorithm marks a win
                 expected = board.won(row, column, 1)        # all of these should be a win
                 self.assertEqual(expected, 1, f'Board:\n{board}')

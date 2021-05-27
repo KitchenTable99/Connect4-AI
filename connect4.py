@@ -117,7 +117,7 @@ class Board():
 
 
     @classmethod
-    def from_list(cls, l):
+    def from_list(cls, l, screen):
         '''This fucntion takes in a list and returns a Board object whos internal array represents the reshaped list
         
         Args:
@@ -126,7 +126,7 @@ class Board():
         Returns:
             Board: the board object
         '''
-        to_return = cls()
+        to_return = cls(screen)
         to_return.internal = np.array(l).reshape(6,7)
         return to_return
 
