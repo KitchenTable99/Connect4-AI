@@ -6,9 +6,11 @@ import sys
 import time
 import math
 import pygame
+import random
 import numpy as np
 from collections import namedtuple
 StartingCoords = namedtuple('StartingCoords', ['row', 'column'])
+AI_TURNS = [2]
 
 class Board():
 
@@ -130,21 +132,6 @@ class Board():
         to_return.internal = np.array(l).reshape(6,7)
         return to_return
 
-def turn(board, player, screen):
-    '''This function is the exposed drop feature
-    
-    Args:
-        board (Board): the board to play on
-        player (int): the value to drop
-        screen (pygame.Screen): the screen to draw on
-    
-    Returns:
-        int: the value returned by the drop funciton. used to determine the game state
-    '''
-
-    return board.drop(drop_column, player)
-
-
 def draw_board(rows, columns, square_size, screen):
     '''This function draws the connect4 board to set up the game
     
@@ -162,6 +149,36 @@ def draw_board(rows, columns, square_size, screen):
             pygame.draw.rect(screen, [69, 69, 69], rect)
             # this is an ugly draw statement that draws a black circle in the middle of each square
             pygame.draw.circle(screen, [0, 0, 0], (int((c*square_size) + (square_size/2)), int((r*square_size) + (square_size/2))), (square_size/2 - 5))
+
+
+def drop_token(board, column, player):
+    '''This function serves as an intermediary between the game loop and the board object.
+    
+    Args:
+        board (Board): the Board object on which the game is being played
+        column (int): the column into which to drop the token
+        player (int): the plays whose turn it is
+    
+    Returns:
+        int: the final board state. (-1 for failed drop. 0 for continue game and 1 for game over)
+    '''
+    board_state = board.drop(column, player)
+    # if the token didn't drop
+    if board_state == -1:
+        return -1
+    
+    # this only happens if token successfully dropped
+    board.display_most_recent_token(player)
+    # check for win
+    if board_state == 1:
+        print(f'Player {player} won!')
+        return 1
+    elif board_state == 2:
+        print(f'Drawn')
+        return 1
+    else:
+        return 0
+
 
 def main():
     # setting up constants and pygame
@@ -182,30 +199,34 @@ def main():
     player = 1
     game_over = False
     while not game_over:
+        # if ai turn, play as ai
+        if player in AI_TURNS:
+            drop_column = random.randint(0, 6)
+            drop_result = drop_token(board, drop_column, player)
+            if drop_result == 0:
+                player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+            elif drop_result == 1:
+                game_over = True
+            else:
+                continue                                        # this will happen if invalid drop (-1) returned from drop_token
         # check for events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # try to drop token
-                board_state = -1
                 drop_column = math.trunc(event.pos[0]/100)
-                board_state = board.drop(drop_column, player)
-                # if the token dropped
-                if board_state != -1:
-                    board.display_most_recent_token(player)
-                # check for win
-                if board_state == 1:
-                    print(f'Player {player} won!')
+                drop_result = drop_token(board, drop_column, player)
+                if drop_result == 0:
+                    player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+                elif drop_result == 1:
                     game_over = True
-                if board_state == 2:
-                    print(f'Drawn')
-                    game_over = True
-                player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+                else:
+                    continue                                        # this will happen if invalid drop (-1) returned from drop_token
 
         pygame.display.flip()           # update display
     # once game over sleep for a bit then quit
-    time.sleep(2)
+    time.sleep(1)
     sys.exit()
 
 if __name__ == '__main__':
