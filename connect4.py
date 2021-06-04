@@ -8,6 +8,7 @@ import math
 import pygame
 import random
 import numpy as np
+from c4_eval import *
 from collections import namedtuple
 StartingCoords = namedtuple('StartingCoords', ['row', 'column'])
 AI_TURNS = [2]
