@@ -1,7 +1,7 @@
 # this script will house the evaluation function so that it can be cythonized
 # the basic idea of the evaluation is to count the number of possible 4's for each side and subtract them.
 # a positive score indicates that player one is winning while a negative indicates that player 2 is winning
-# zero represents equality between the players while numbers whose absolute values are larger than 100 represents a win for the corresponding side
+# zero represents equality between the players while numbers whose absolute values are very large represent a win for the corresponding side
 # Author: Caleb Bitting
 # Date: 05/28/21
 
@@ -57,9 +57,9 @@ def count_4s(segments):
             p2 += 1
         elif 1 in seg:
             if 2 not in seg:
-                p1 += 100 if seg_sum == 4 else 1              # add 100 if all four entries are ones otherwise just add 1
+                p1 += 1000 if seg_sum == 4 else 1              # add 100 if all four entries are ones otherwise just add 1
         else:                                                   # only happens when segment is not empty and doesn't have a one. i.e. the only number present is a 2
-            p2 += 100 if seg_sum == 8 else 1                  # add 100 if all four entreis are twos otherwise just add 1
+            p2 += 1000 if seg_sum == 8 else 1                  # add 100 if all four entreis are twos otherwise just add 1
     return (p1, p2)
 
 def test():

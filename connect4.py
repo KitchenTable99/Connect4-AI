@@ -205,8 +205,10 @@ def main():
             drop_column = random.randint(0, 6)
             drop_result = drop_token(board, drop_column, player)
             if drop_result == 0:
+                print(evaluate(board.internal))
                 player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
             elif drop_result == 1:
+                print(evaluate(board.internal))
                 game_over = True
             else:
                 continue                                        # this will happen if invalid drop (-1) returned from drop_token
@@ -219,8 +221,10 @@ def main():
                 drop_column = math.trunc(event.pos[0]/100)
                 drop_result = drop_token(board, drop_column, player)
                 if drop_result == 0:
+                    print(evaluate(board.internal))
                     player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
                 elif drop_result == 1:
+                    print(evaluate(board.internal))
                     game_over = True
                 else:
                     continue                                        # this will happen if invalid drop (-1) returned from drop_token
