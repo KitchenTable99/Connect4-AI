@@ -129,7 +129,7 @@ class Board():
     def copy(self):
         to_return = Board(self.screen)
         to_return.internal = np.copy(self.internal)
-        to_return.drop_idx = self.drop_idx
+        to_return.drop_idx = self.drop_idx[:]
         to_return.most_recent_drop = self.most_recent_drop
 
         return to_return
@@ -207,7 +207,6 @@ def minimax(player, board_obj, depth):
     # not base case
     # get all possible moves
     candidate_moves = board_obj.candidate_moves()
-    print(candidate_moves)
 
     # evaluate
     for candidate_move in candidate_moves:
@@ -215,7 +214,6 @@ def minimax(player, board_obj, depth):
         best_eval = -1000 if player == 1 else 1000
         candidate_board = board_obj.copy()
         candidate_board.drop(candidate_move, player)                         # make the move
-        print(type(candidate_board))
         _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1)      # evaluate resulting position assuming best play
 
         # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
@@ -251,7 +249,7 @@ def main():
         # if ai turn, play as ai
         if player in AI_TURNS:
             # drop a token
-            drop_column, _ = minimax(player, board, depth=1)
+            drop_column, _ = minimax(player, board, depth=4)
             drop_result = drop_token(board, drop_column, player)
 
             # evaluate the outcome of the drop
