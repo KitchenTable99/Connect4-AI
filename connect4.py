@@ -23,6 +23,14 @@ class Board():
 
     def __str__(self): return str(self.internal)
 
+    def candidate_moves(self):
+        '''This returns the possible columns
+        
+        Returns:
+            list: this is a list of possible columns in which a token can be placed
+        '''
+        return [idx for idx, num_possible_drops in enumerate(self.drop_idx) if num_possible_drops >= 0]
+
     def drop(self, column, player):
         '''This is the function that actually drops the piece
         
@@ -187,23 +195,27 @@ def drop_token(board, column, player):
         return 0
 
 def minimax(player, board_obj, depth):
-    evaluation = evaluate(board.internal)
+    # get evaluation
+    evaluation = evaluate(board_obj.internal)
     # base cases
     if depth == 0 or abs(evaluation) > 100:             # depth reached or win
-        return (-1, evaluate(board.internal))
+        return (-1, evaluation)
 
-    if board.internal.sum() == 63:                      # this total score can only be reached via equal numbers 1 and 2 in a drawn board state
+    if board_obj.internal.sum() == 63:                      # this total score can only be reached via equal numbers 1 and 2 in a drawn board state
         return (-1, 0)
 
     # not base case
     # get all possible moves
     candidate_moves = board_obj.candidate_moves()
+    print(candidate_moves)
 
     # evaluate
-    best_eval = -1000 if player == 1 else 1000
-    best_column = 0
-    for candidate_move in candidate_boards:
-        candidate_board = board_obj.copy().drop(candidate_move, player)                         # make the move
+    for candidate_move in candidate_moves:
+        best_column = -1
+        best_eval = -1000 if player == 1 else 1000
+        candidate_board = board_obj.copy()
+        candidate_board.drop(candidate_move, player)                         # make the move
+        print(type(candidate_board))
         _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1)      # evaluate resulting position assuming best play
 
         # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
@@ -216,9 +228,6 @@ def minimax(player, board_obj, depth):
             best_column = candidate_move
 
     return (best_column, best_eval)
-
-    
-
 
 def main():
     # setting up constants and pygame
@@ -242,16 +251,14 @@ def main():
         # if ai turn, play as ai
         if player in AI_TURNS:
             # drop a token
-            drop_column = random.randint(0, 6)
+            drop_column, _ = minimax(player, board, depth=1)
             drop_result = drop_token(board, drop_column, player)
 
             # evaluate the outcome of the drop
             if drop_result == 0:                    # successful drop but not a win
-                print(evaluate(board.internal))
                 player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
 
             elif drop_result == 1:                  # successful drop and a win/
-                print(evaluate(board.internal))
                 game_over = True
             else:                                   # this will happen if invalid drop (-1) returned from drop_token
                 continue
@@ -270,13 +277,10 @@ def main():
                     drop_column = math.trunc(event.pos[0]/100)
                     drop_result = drop_token(board, drop_column, player)
 
-
                     if drop_result == 0:                          # successful drop and no win
-                        print(evaluate(board.internal))
                         player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
 
                     elif drop_result == 1:                        # successful drop and win/draw
-                        print(evaluate(board.internal))
                         game_over = True
 
                     else:                                         # this will happen if invalid drop (-1) returned from drop_token
