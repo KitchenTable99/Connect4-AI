@@ -118,6 +118,13 @@ class Board():
         # draw the circle
         pygame.draw.circle(self.screen, color, (x_center, y_center), 45)
 
+    def copy(self):
+        to_return = Board(self.screen)
+        to_return.internal = np.copy(self.internal)
+        to_return.drop_idx = self.drop_idx
+        to_return.most_recent_drop = self.most_recent_drop
+
+        return to_return
 
     @classmethod
     def from_list(cls, l, screen):
@@ -151,7 +158,6 @@ def draw_board(rows, columns, square_size, screen):
             # this is an ugly draw statement that draws a black circle in the middle of each square
             pygame.draw.circle(screen, [0, 0, 0], (int((c*square_size) + (square_size/2)), int((r*square_size) + (square_size/2))), (square_size/2 - 5))
 
-
 def drop_token(board, column, player):
     '''This function serves as an intermediary between the game loop and the board object.
     
@@ -179,6 +185,39 @@ def drop_token(board, column, player):
         return 1
     else:
         return 0
+
+def minimax(player, board_obj, depth):
+    evaluation = evaluate(board.internal)
+    # base cases
+    if depth == 0 or abs(evaluation) > 100:             # depth reached or win
+        return (-1, evaluate(board.internal))
+
+    if board.internal.sum() == 63:                      # this total score can only be reached via equal numbers 1 and 2 in a drawn board state
+        return (-1, 0)
+
+    # not base case
+    # get all possible moves
+    candidate_moves = board_obj.candidate_moves()
+
+    # evaluate
+    best_eval = -1000 if player == 1 else 1000
+    best_column = 0
+    for candidate_move in candidate_boards:
+        candidate_board = board_obj.copy().drop(candidate_move, player)                         # make the move
+        _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1)      # evaluate resulting position assuming best play
+
+        # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
+        if player == 1 and child_eval > best_eval:
+            best_eval = child_eval
+            best_column = candidate_move
+
+        elif player == 2 and child_eval < best_eval:
+            best_eval = child_eval
+            best_column = candidate_move
+
+    return (best_column, best_eval)
+
+    
 
 
 def main():
