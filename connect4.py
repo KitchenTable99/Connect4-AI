@@ -202,32 +202,46 @@ def main():
     while not game_over:
         # if ai turn, play as ai
         if player in AI_TURNS:
+            # drop a token
             drop_column = random.randint(0, 6)
             drop_result = drop_token(board, drop_column, player)
-            if drop_result == 0:
+
+            # evaluate the outcome of the drop
+            if drop_result == 0:                    # successful drop but not a win
                 print(evaluate(board.internal))
                 player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
-            elif drop_result == 1:
+
+            elif drop_result == 1:                  # successful drop and a win/
                 print(evaluate(board.internal))
                 game_over = True
-            else:
-                continue                                        # this will happen if invalid drop (-1) returned from drop_token
+            else:                                   # this will happen if invalid drop (-1) returned from drop_token
+                continue
+
+
         # check for events
         for event in pygame.event.get():
+            # exit
             if event.type == pygame.QUIT:
                 sys.exit()
+
+            # player clicked
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                # try to drop token
-                drop_column = math.trunc(event.pos[0]/100)
-                drop_result = drop_token(board, drop_column, player)
-                if drop_result == 0:
-                    print(evaluate(board.internal))
-                    player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
-                elif drop_result == 1:
-                    print(evaluate(board.internal))
-                    game_over = True
-                else:
-                    continue                                        # this will happen if invalid drop (-1) returned from drop_token
+                if player not in AI_TURNS:                                  # make sure the player should be playing
+                    # try to drop token
+                    drop_column = math.trunc(event.pos[0]/100)
+                    drop_result = drop_token(board, drop_column, player)
+
+
+                    if drop_result == 0:                          # successful drop and no win
+                        print(evaluate(board.internal))
+                        player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+
+                    elif drop_result == 1:                        # successful drop and win/draw
+                        print(evaluate(board.internal))
+                        game_over = True
+
+                    else:                                         # this will happen if invalid drop (-1) returned from drop_token
+                        continue
 
         pygame.display.flip()           # update display
     # once game over sleep for a bit then quit
