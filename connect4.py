@@ -209,9 +209,9 @@ def minimax(player, board_obj, depth):
     candidate_moves = board_obj.candidate_moves()
 
     # evaluate
+    best_column = -1
+    best_eval = -1000 if player == 1 else 1000
     for candidate_move in candidate_moves:
-        best_column = -1
-        best_eval = -1000 if player == 1 else 1000
         candidate_board = board_obj.copy()
         candidate_board.drop(candidate_move, player)                         # make the move
         _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1)      # evaluate resulting position assuming best play
