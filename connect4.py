@@ -207,6 +207,9 @@ def minimax(player, board_obj, depth, alpha, beta):
     # not base case
     # get all possible moves
     candidate_moves = board_obj.candidate_moves()
+    candidate_moves.sort(key=lambda column: abs(column-3))      # this will check centermost columns first which should boost performance of alpha-beta
+
+    # sort to get closest to center
 
     # evaluate
     best_column = -1
