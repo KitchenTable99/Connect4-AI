@@ -194,7 +194,7 @@ def drop_token(board, column, player):
     else:
         return 0
 
-def minimax(player, board_obj, depth):
+def minimax(player, board_obj, depth, alpha, beta):
     # get evaluation
     evaluation = evaluate(board_obj.internal)
     # base cases
@@ -214,16 +214,34 @@ def minimax(player, board_obj, depth):
     for candidate_move in candidate_moves:
         candidate_board = board_obj.copy()
         candidate_board.drop(candidate_move, player)                         # make the move
-        _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1)      # evaluate resulting position assuming best play
+        _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1, alpha=alpha, beta=beta)      # evaluate resulting position assuming best play
 
         # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
-        if player == 1 and child_eval > best_eval:
-            best_eval = child_eval
-            best_column = candidate_move
+        if player == 1:
+            # check for better move
+            if child_eval > best_eval:
+                best_eval = child_eval
+                best_column = candidate_move
 
-        elif player == 2 and child_eval < best_eval:
-            best_eval = child_eval
-            best_column = candidate_move
+            # check for pruning
+            if best_eval >= beta:
+                break
+
+            # update alpha
+            alpha = max(alpha, best_eval)
+
+        elif player == 2:
+            # check for better move
+            if child_eval < best_eval:
+                best_eval = child_eval
+                best_column = candidate_move
+
+            # check for pruning
+            if best_eval <= alpha:
+                break
+
+            # update beta
+            beta = min(beta, best_eval)
 
     return (best_column, best_eval)
 
@@ -249,7 +267,7 @@ def main():
         # if ai turn, play as ai
         if player in AI_TURNS:
             # drop a token
-            drop_column, _ = minimax(player, board, depth=4)
+            drop_column, _ = minimax(player, board, depth=6, alpha=-9999, beta=9999)
             drop_result = drop_token(board, drop_column, player)
 
             # evaluate the outcome of the drop
