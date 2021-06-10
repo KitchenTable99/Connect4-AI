@@ -217,6 +217,7 @@ def minimax(player, board_obj, depth, alpha, beta):
     for candidate_move in candidate_moves:
         candidate_board = board_obj.copy()
         candidate_board.drop(candidate_move, player)                         # make the move
+        # check the cache
         _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1, alpha=alpha, beta=beta)      # evaluate resulting position assuming best play
 
         # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
@@ -228,6 +229,7 @@ def minimax(player, board_obj, depth, alpha, beta):
 
             # check for pruning
             if best_eval >= beta:
+                # cache the board as a break
                 break
 
             # update alpha
@@ -241,6 +243,7 @@ def minimax(player, board_obj, depth, alpha, beta):
 
             # check for pruning
             if best_eval <= alpha:
+                # cache the board as a break
                 break
 
             # update beta
