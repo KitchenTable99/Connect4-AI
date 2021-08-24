@@ -1,5 +1,11 @@
 # this is the python file for bitboards
 
+class GameState():
+
+    def __init__(self):
+        bboard_1 = BitBoard()
+        bboard_2 = BitBoard()
+
 class BitBoard:
 
     def __init__(self):
@@ -9,10 +15,34 @@ class BitBoard:
         drop_idx = (7*column) + row	# find the spot in grid
         drop_num = 2**drop_idx		# translate to number
         self.internal += drop_num
+        # print(self.check_win())
 
     def binary_array(self):
         binary_string = format(self.internal, '049b')
         return [num for num in binary_string]
+
+    def connected_check(self, shift_distance):
+        '''This function will check to see if the bitboard contains a win in the horizontal direction.'''
+        left_bboard = self.internal >> shift_distance                          # shift left
+        combined_left = self.internal & left_bboard                            # combine shifted with original
+        lefter_bboard = combined_left >> (2*shift_distance)                    # shift right
+
+        return True if (lefter_bboard & combined_left) else False
+
+    def check_win(self):
+        '''This function checks for a win in all four directions
+        
+        Returns:
+            bool: whether or not there is a win on this bitboard
+        '''
+        for shift_distance in [1, 6, 7, 8]:
+            win = self.connected_check(shift_distance)
+            if win:
+                print(shift_distance)
+                return True
+        else:
+            return False
+
 
     def __str__(self):
         # setup variables
@@ -37,7 +67,6 @@ def test():
     bboard = BitBoard()
     bboard.drop(0,1)
     bboard.drop(1,0)
-    print(bboard)
 
 if __name__ == '__main__':
     test()
