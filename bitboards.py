@@ -3,8 +3,24 @@
 class GameState():
 
     def __init__(self):
+        # create the player boards
         bboard_1 = BitBoard()
         bboard_2 = BitBoard()
+        # setup other constants
+        current_turn = 1
+        top_row_by_column = [5 for _ in range(7)]
+    
+    def drop(self, column):
+        # get proper row corresponding to column
+        row = self.top_row_by_column[column]
+        if row == -1:                               # column full, try again
+            return False
+        self.top_row_by_column[column] -=1          # decrement row-column indices
+
+        exec(f'bboard_{self.current_turn}.drop(row, column)')       # put correct token in correct place
+        self.current_turn = 3 - current_turn                        # switch the turns
+
+        return True
 
 class BitBoard:
 
@@ -15,7 +31,6 @@ class BitBoard:
         drop_idx = (7*column) + row	# find the spot in grid
         drop_num = 2**drop_idx		# translate to number
         self.internal += drop_num
-        # print(self.check_win())
 
     def binary_array(self):
         binary_string = format(self.internal, '049b')
