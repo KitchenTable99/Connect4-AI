@@ -4,23 +4,41 @@ class GameState():
 
     def __init__(self):
         # create the player boards
-        bboard_1 = BitBoard()
-        bboard_2 = BitBoard()
+        self.bboard_1 = BitBoard()
+        self.bboard_2 = BitBoard()
         # setup other constants
-        current_turn = 1
-        top_row_by_column = [5 for _ in range(7)]
+        self.current_turn = 1
+        self.top_row_by_column = [5 for _ in range(7)]
+
+    def bitboards(self):
+        return (self.bboard_1, self.bboard_2)
     
     def drop(self, column):
         # get proper row corresponding to column
         row = self.top_row_by_column[column]
         if row == -1:                               # column full, try again
             return False
-        self.top_row_by_column[column] -=1          # decrement row-column indices
+        self.top_row_by_column[column] -= 1          # decrement row-column indices
 
-        exec(f'bboard_{self.current_turn}.drop(row, column)')       # put correct token in correct place
-        self.current_turn = 3 - current_turn                        # switch the turns
+        exec(f'self.bboard_{self.current_turn}.drop(row, column)')       # put correct token in correct place
+        self.current_turn = 3 - self.current_turn                        # switch the turns
 
         return True
+
+    def end(self):
+        # win = 1 or 2
+        # draw = 0
+        # nothing = -1
+        if self.bboard_1.check_win():
+            return 1
+        elif self.bboard_2.check_win():
+            return 2
+        elif (self.bboard_1.internal | self.bboard_2.internal) == 562949953421311:
+            return 0
+        else:
+            return -1
+
+
 
 class BitBoard:
 
