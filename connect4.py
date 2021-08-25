@@ -6,12 +6,17 @@ import sys
 import time
 import math
 import pygame
-
-
 from bitboards import BitBoard, GameState
 
 def draw_board(game_state, screen, first_draw=False):
-    # draw an empty board
+    '''This function draws the game board
+    
+    Args:
+        game_state (GameState): this object contains all the information needed to rebuild the game state
+        screen (pygame.screen): the screen on which to draw the information
+        first_draw (bool, optional): is this the first draw or not?
+    '''
+    # draw an empty board if it is the first time
     if first_draw:
         for c in range(7):
             for r in range(6):
@@ -21,34 +26,31 @@ def draw_board(game_state, screen, first_draw=False):
                 # this is an ugly draw statement that draws a black circle in the middle of each square
                 pygame.draw.circle(screen, [0, 0, 0], (int((c*100) + 50), int((r*100) + 50)),  45)
 
+    # every time get the bitboards for each player
     bboard_1, bboard_2 = game_state.bitboards()
 
+    # draw the tokens for each player in the correct location if the corresponding bit is high
     for idx, position in enumerate(reversed(bboard_1.binary_array())):
-        if int(position) == 1:
-            print("triggered")
+        if position == 1:
             row = idx % 7               # modulo gets the row
             column = idx // 7           # integer division gets the column
             draw_token(screen, row, column, 1)
 
     for idx, position in enumerate(reversed(bboard_2.binary_array())):
-        if int(position) == 1:
-            print("triggered")
+        if position == 1:
             row = idx % 7               # modulo gets the row
             column = idx // 7           # integer division gets the column
             draw_token(screen, row, column, 2)
 
 def draw_token(screen, row, column, player):
-    '''This function serves as an intermediary between the game loop and the board object.
+    '''This function draws a player token.
     
     Args:
-        board (Board): the Board object on which the game is being played
+        screen (pygame.screen): the screen on which to draw
+        row (int): the row in which to drop the token
         column (int): the column into which to drop the token
         player (int): the plays whose turn it is
-    
-    Returns:
-        int: the final board state. (-1 for failed drop. 0 for continue game and 1 for game over)
     '''
-    print('draw token called')
     # find the center of the circle
     x_center = 50 + 100*column
     y_center = 50 + 100*row
@@ -84,19 +86,22 @@ def main():
                 # try to drop token
                 drop_column = math.trunc(event.pos[0]/100)
                 dropped = game_state.drop(drop_column)
+
                 if dropped:
+                    # redraw the player tokens
                     draw_board(game_state, screen)
+                    # check for game end
                     end = game_state.end()
-                    if end == 1:
+                    if end == 1:                                # player one victory
                         print('Player 1 won!')
                         game_over = True
-                    elif end == 2:
+                    elif end == 2:                              # player two victory
                         print('Player 2 won!')
                         game_over = True
-                    elif end == 0:
+                    elif end == 0:                              # draw
                         print('Draw...')
                         game_over = True
-                    else:
+                    else:                                       # game not over
                         pass
                 
 
