@@ -104,6 +104,47 @@ class BitBoard:
         else:
             return False
 
+    def win_this_move(self, rows):
+        '''This function will drop a token into each row and then check for a win.
+        
+        Args:
+            rows (list): a list of the top row indexed by column number
+        
+        Returns:
+            bool: whether or not there is a win possible on this turn for the active player
+        '''
+        # loop over each column dropping in the appropriate row
+        for column, row in enumerate(rows):
+            if row == -1:                                                       # make sure a token can be dropped
+                continue
+            # drop the token
+            drop_idx = (7*column) + row
+            drop_num = 2**drop_idx
+            self.internal += drop_num
+
+            # check for win and remove token
+            win_present = self.check_win()
+            self.internal -= drop_num
+            if win_present:
+                return True
+        else:
+            return False
+
+
+    def num_tokens_dropped(self):
+        '''This function uses Brian Kernighan's algorithm to return the number of set bits in the internal field. This represents the number of dropped tokens
+        
+        Returns:
+            int: the number of dropped tokens
+        '''
+        # set up variables for Brian Kernighan's algorithm
+        internal_copy = self.internal
+        set_bits = 0
+        while internal_copy != 0:
+            internal_copy = internal_copy & (internal_copy - 1)
+            set_bits += 1
+
+        return set_bits
 
     def __str__(self):
         # setup variables
@@ -126,8 +167,11 @@ class BitBoard:
 
 def test():
     bboard = BitBoard()
-    bboard.drop(0,1)
+    bboard.drop(0,0)
     bboard.drop(1,0)
+    bboard.drop(2,0)
+    print(f'{bboard.win_this_move([3,5,5,5,5,5,5]) = }')
+    print(bboard)
 
 if __name__ == '__main__':
     test()

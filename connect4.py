@@ -103,6 +103,7 @@ def main():
                         game_over = True
                     else:                                       # game not over
                         pass
+                        print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
                 
 
         pygame.display.flip()           # update display
