@@ -61,6 +61,40 @@ def draw_token(screen, row, column, player):
     # draw the circle
     pygame.draw.circle(screen, color, (x_center, y_center), 45)
 
+def negamax(game_state):
+    '''This function strongly solves the game connect four
+    
+    Args:
+        game_state (GameState): the current game state
+    
+    Returns:
+        int: the evaluation for the position
+    '''
+    # check for draw
+    p1_moves = game_state.bboard_1.num_tokens_dropped()
+    p2_moves = game_state.bboard_2.num_tokens_dropped()
+    nb_moves = p1_moves + p2_moves
+    if nb_moves == 42:
+        return 0
+
+    # check for win next move
+    if game_state.current_player_can_win():
+        return (43 - nb_moves)//2
+
+    # call recursively
+    best_score = -42                                        # score cannot get worse than this
+
+    for col in range(7):
+        if game_state.valid_drop(col):
+            child_game_state = game_state.clone()
+            child_game_state.drop(col)
+            score = -1 * negamax(child_game_state)
+            if score > best_score:
+                best_score = score
+
+    return best_score
+
+
 def main():
     # set up pygame
     pygame.init()

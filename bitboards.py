@@ -17,6 +17,19 @@ class GameState():
             tuple: A tuple of bitboards (bboard_1, bboard_2)
         '''
         return (self.bboard_1, self.bboard_2)
+
+    def valid_drop(self, column):
+        '''Helper function so that this functionality is exposed for the negamax function
+        
+        Args:
+            column (int): the column to check for validity
+        
+        Returns:
+            bool: whether or not the column is a valid drop site
+        '''
+        row = self.top_row_by_column[column]
+
+        return False if row == -1 else True                         # column full
     
     def drop(self, column):
         '''This function tries to update the game state with a dropped token
@@ -28,8 +41,8 @@ class GameState():
             bool: whether or not the drop was successful
         '''
         # get proper row corresponding to column
-        row = self.top_row_by_column[column]
-        if row == -1:                               # column full, try again
+        valid_column = self.valid_drop(column)
+        if not valid_column:
             return False
         self.top_row_by_column[column] -= 1          # decrement row-column indices
 
@@ -55,6 +68,23 @@ class GameState():
             return 0
         else:
             return -1
+
+    def current_player_can_win(self):
+        if self.current_turn == 1:
+            possible = self.bboard_1.win_this_move(self.top_row_by_column)
+        else:
+            possible = self.bboard_2.win_this_move(self.top_row_by_column)
+
+        return possible
+
+    def clone(self):
+        to_return = GameState()
+        to_return.bboard_1 = self.bboard_1.clone()
+        to_return.bboard_2 = self.bboard_2.clone()
+        to_return.current_turn = self.current_turn
+        to_return.top_row_by_column = self.top_row_by_column
+
+        return to_return
 
 class BitBoard:
 
@@ -145,6 +175,12 @@ class BitBoard:
             set_bits += 1
 
         return set_bits
+
+    def clone(self):
+        to_return = BitBoard()
+        to_return.internal = self.internal
+
+        return to_return
 
     def __str__(self):
         # setup variables
