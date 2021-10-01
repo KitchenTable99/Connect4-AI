@@ -44,6 +44,7 @@ class GameState():
         valid_column = self.valid_drop(column)
         if not valid_column:
             return False
+        row = self.top_row_by_column[column]
         self.top_row_by_column[column] -= 1          # decrement row-column indices
 
         exec(f'self.bboard_{self.current_turn}.drop(row, column)')       # put correct token in correct place
@@ -82,7 +83,7 @@ class GameState():
         to_return.bboard_1 = self.bboard_1.clone()
         to_return.bboard_2 = self.bboard_2.clone()
         to_return.current_turn = self.current_turn
-        to_return.top_row_by_column = self.top_row_by_column
+        to_return.top_row_by_column = self.top_row_by_column[:]
 
         return to_return
 
@@ -129,7 +130,6 @@ class BitBoard:
         for shift_distance in [1, 6, 7, 8]:
             win = self.connected_check(shift_distance)
             if win:
-                print(shift_distance)
                 return True
         else:
             return False

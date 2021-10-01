@@ -61,7 +61,41 @@ def draw_token(screen, row, column, player):
     # draw the circle
     pygame.draw.circle(screen, color, (x_center, y_center), 45)
 
-def negamax(game_state):
+from functools import wraps
+
+
+# decorator to trace execution of recursive function
+def trace(func):
+
+    # cache func name, which will be used for trace print
+    func_name = func.__name__
+    # define the separator, which will indicate current recursion level (repeated N times)
+    separator = '|  '
+
+    # current recursion depth
+    trace.recursion_depth = 0
+
+    @wraps(func)
+    def traced_func(*args, **kwargs):
+
+        # repeat separator N times (where N is recursion depth)
+        # `map(str, args)` prepares the iterable with str representation of positional arguments
+        # `", ".join(map(str, args))` will generate comma-separated list of positional arguments
+        # `"x"*5` will print `"xxxxx"` - so we can use multiplication operator to repeat separator
+        print(f'{separator * trace.recursion_depth}|-- {func_name}({", ".join(map(str, args))})')
+        # we're diving in
+        trace.recursion_depth += 1
+        result = func(*args, **kwargs)
+        # going out of that level of recursion
+        trace.recursion_depth -= 1
+        # result is printed on the next level
+        print(f'{separator * (trace.recursion_depth + 1)}|-- return {result}')
+
+        return result
+
+    return traced_func
+
+def negamax(game_state, alpha, beta):
     '''This function strongly solves the game connect four
     
     Args:
@@ -82,17 +116,25 @@ def negamax(game_state):
         return (43 - nb_moves)//2
 
     # call recursively
-    best_score = -42                                        # score cannot get worse than this
+    best_score = (41 - nb_moves)//2
+    if beta > best_score:
+        beta = best_score
+        if alpha >= beta:
+            return beta
 
     for col in range(7):
         if game_state.valid_drop(col):
             child_game_state = game_state.clone()
             child_game_state.drop(col)
-            score = -1 * negamax(child_game_state)
-            if score > best_score:
-                best_score = score
+            score = -1*negamax(child_game_state, (-1*alpha), (-1*beta))
+            if score >= beta:
+                return score
+            if score > alpha:
+                alpha = score
 
-    return best_score
+    return alpha
+
+# negamax = trace(negamax)
 
 
 def main():
@@ -118,26 +160,46 @@ def main():
             # player clicked
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # try to drop token
-                drop_column = math.trunc(event.pos[0]/100)
-                dropped = game_state.drop(drop_column)
+                if game_state.current_turn == 1:
+                    drop_column = math.trunc(event.pos[0]/100)
+                    dropped = game_state.drop(drop_column)
 
-                if dropped:
-                    # redraw the player tokens
-                    draw_board(game_state, screen)
-                    # check for game end
-                    end = game_state.end()
-                    if end == 1:                                # player one victory
-                        print('Player 1 won!')
-                        game_over = True
-                    elif end == 2:                              # player two victory
-                        print('Player 2 won!')
-                        game_over = True
-                    elif end == 0:                              # draw
-                        print('Draw...')
-                        game_over = True
-                    else:                                       # game not over
-                        pass
-                        print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
+                    if dropped:
+                        # redraw the player tokens
+                        draw_board(game_state, screen)
+                        # check for game end
+                        end = game_state.end()
+                        if end == 1:                                # player one victory
+                            print('Player 1 won!')
+                            game_over = True
+                        elif end == 2:                              # player two victory
+                            print('Player 2 won!')
+                            game_over = True
+                        elif end == 0:                              # draw
+                            print('Draw...')
+                            game_over = True
+                        else:                                       # game not over
+                            pass
+                            # print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
+        if game_state.current_turn == 2:
+            out = negamax(game_state, -100, 100)
+            print(out)
+            game_over = True
+            '''game_state.drop(move)
+            draw_board(game_state, screen)
+            end = game_state.end()
+            if end == 1:                                # player one victory
+                print('Player 1 won!')
+                game_over = True
+            elif end == 2:                              # player two victory
+                print('Player 2 won!')
+                game_over = True
+            elif end == 0:                              # draw
+                print('Draw...')
+                game_over = True
+            else:                                       # game not over
+                pass
+            '''
                 
 
         pygame.display.flip()           # update display
