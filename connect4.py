@@ -6,7 +6,39 @@ import sys
 import time
 import math
 import pygame
+from functools import wraps
 from bitboards import BitBoard, GameState
+
+# decorator to trace execution of recursive function
+def trace(func):
+
+    # cache func name, which will be used for trace print
+    func_name = func.__name__
+    # define the separator, which will indicate current recursion level (repeated N times)
+    separator = '|  '
+
+    # current recursion depth
+    trace.recursion_depth = 0
+
+    @wraps(func)
+    def traced_func(*args, **kwargs):
+
+        # repeat separator N times (where N is recursion depth)
+        # `map(str, args)` prepares the iterable with str representation of positional arguments
+        # `", ".join(map(str, args))` will generate comma-separated list of positional arguments
+        # `"x"*5` will print `"xxxxx"` - so we can use multiplication operator to repeat separator
+        print(f'{separator * trace.recursion_depth}|-- {func_name}({", ".join(map(str, args))})')
+        # we're diving in
+        trace.recursion_depth += 1
+        result = func(*args, **kwargs)
+        # going out of that level of recursion
+        trace.recursion_depth -= 1
+        # result is printed on the next level
+        print(f'{separator * (trace.recursion_depth + 1)}|-- return {result}')
+
+        return result
+
+    return traced_func
 
 def draw_board(game_state, screen, first_draw=False):
     '''This function draws the game board
@@ -61,40 +93,6 @@ def draw_token(screen, row, column, player):
     # draw the circle
     pygame.draw.circle(screen, color, (x_center, y_center), 45)
 
-from functools import wraps
-
-
-# decorator to trace execution of recursive function
-def trace(func):
-
-    # cache func name, which will be used for trace print
-    func_name = func.__name__
-    # define the separator, which will indicate current recursion level (repeated N times)
-    separator = '|  '
-
-    # current recursion depth
-    trace.recursion_depth = 0
-
-    @wraps(func)
-    def traced_func(*args, **kwargs):
-
-        # repeat separator N times (where N is recursion depth)
-        # `map(str, args)` prepares the iterable with str representation of positional arguments
-        # `", ".join(map(str, args))` will generate comma-separated list of positional arguments
-        # `"x"*5` will print `"xxxxx"` - so we can use multiplication operator to repeat separator
-        print(f'{separator * trace.recursion_depth}|-- {func_name}({", ".join(map(str, args))})')
-        # we're diving in
-        trace.recursion_depth += 1
-        result = func(*args, **kwargs)
-        # going out of that level of recursion
-        trace.recursion_depth -= 1
-        # result is printed on the next level
-        print(f'{separator * (trace.recursion_depth + 1)}|-- return {result}')
-
-        return result
-
-    return traced_func
-
 def negamax(game_state, alpha, beta):
     '''This function strongly solves the game connect four
     
@@ -135,6 +133,26 @@ def negamax(game_state, alpha, beta):
     return alpha
 
 # negamax = trace(negamax)
+
+def ai_move(game_state):
+    score_column = {}
+    for col in range(7):
+        if game_state.valid_drop(col):
+            child_game_state = game_state.clone()
+            child_game_state.drop(col)
+            score = negamax(child_game_state, -100, 100)
+
+            score_column[col] = score
+
+    print(f'{score_column = }')
+    if game_state.current_turn == 1:            # maximizer
+        best_col = max(score_column, key=score_column.get)
+        # best_col = list(score_column.keys())[list(score_column.values()).index(max_key)]
+    else:
+        best_col = min(score_column, key=score_column.get)
+        # best_col = list(score_column.keys())[list(score_column.values()).index(min_key)]
+
+    return best_col
 
 
 def main():
@@ -182,10 +200,8 @@ def main():
                             pass
                             # print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
         if game_state.current_turn == 2:
-            out = negamax(game_state, -100, 100)
-            print(out)
-            game_over = True
-            '''game_state.drop(move)
+            ai_col = ai_move(game_state)
+            game_state.drop(ai_col)
             draw_board(game_state, screen)
             end = game_state.end()
             if end == 1:                                # player one victory
@@ -199,7 +215,6 @@ def main():
                 game_over = True
             else:                                       # game not over
                 pass
-            '''
                 
 
         pygame.display.flip()           # update display
