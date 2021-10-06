@@ -132,7 +132,7 @@ def negamax(game_state, alpha, beta):
 
     return alpha
 
-# negamax = trace(negamax)
+negamax = trace(negamax)
 
 def ai_move(game_state):
     score_column = {}
