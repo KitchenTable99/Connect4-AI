@@ -6,286 +6,184 @@ import sys
 import time
 import math
 import pygame
-import random
-import numpy as np
-from c4_eval import *
-from collections import namedtuple
-StartingCoords = namedtuple('StartingCoords', ['row', 'column'])
-AI_TURNS = [2]
+from functools import wraps, cache
+from bitboards import GameState
 
-class Board():
 
-    def __init__(self, screen):
-        self.internal = np.zeros((6, 7))
-        self.drop_idx = [5 for _ in range(7)]           # this is used to "simulate gravity"
-        self.screen = screen
-        self.most_recent_drop = None
+# decorator to trace execution of recursive function
+def trace(func):
+    # cache func name, which will be used for trace print
+    func_name = func.__name__
+    # define the separator, which will indicate current recursion level (repeated N times)
+    separator = '|  '
 
-    def __str__(self): return str(self.internal)
+    # current recursion depth
+    trace.recursion_depth = 0
 
-    def candidate_moves(self):
-        '''This returns the possible columns
-        
-        Returns:
-            list: this is a list of possible columns in which a token can be placed
-        '''
-        return [idx for idx, num_possible_drops in enumerate(self.drop_idx) if num_possible_drops >= 0]
+    @wraps(func)
+    def traced_func(*args, **kwargs):
+        # repeat separator N times (where N is recursion depth)
+        # `map(str, args)` prepares the iterable with str representation of positional arguments
+        # `", ".join(map(str, args))` will generate comma-separated list of positional arguments
+        # `"x"*5` will print `"xxxxx"` - so we can use multiplication operator to repeat separator
+        print(f'{separator * trace.recursion_depth}|-- {func_name}({", ".join(map(str, args))})')
+        # we're diving in
+        trace.recursion_depth += 1
+        result = func(*args, **kwargs)
+        # going out of that level of recursion
+        trace.recursion_depth -= 1
+        # result is printed on the next level
+        print(f'{separator * (trace.recursion_depth + 1)}|-- return {result}')
 
-    def drop(self, column, player):
-        '''This is the function that actually drops the piece
-        
-        Args:
-            column (int): the column into which to drop the piece
-            player (int): the value of the player 1 == red and 2 == yellow
-        
-        Returns:
-            int: 0 if drop successful, -1 if outside of board, 1 if this drop caused a winning state, 2 if this caused a drawn state
-        '''
-        # readability
-        row = self.drop_idx[column]
-        self.most_recent_drop = (row, column)
-        # make sure that we aren't trying to drop the token above the board
-        if row < 0:
-            return -1                                      # did not drop token
-        # update the board state
-        self.drop_idx[column] -= 1
-        self.internal[row, column] = player
-        return self.won(row, column, player)               # dropped token or win
+        return result
 
-    def won(self, row, column, player):
-        '''This function checks to see if the most recently dropped token resulted in a win
-        
-        Args:
-            column (int): the column into which the most recently dropped token was dropped
-            row (int): the row into which the most recently dropped token was dropped
-            player (int): the player who dropped the most recently dropped token
-        
-        Returns:
-            int: 0 for not, 1 for win, and 2 for draw
-        '''
-        # check row
-        in_a_row = 0
-        for token in self.internal[row]:
-            if token != player:
-                in_a_row = 0            # reset count if not player token
-            else:
-                in_a_row += 1           # increment count and check for win
-                if in_a_row >= 4:
-                    return 1
-        # check column
-        in_a_row = 0
-        for temp_row in range(6):
-            token = self.internal[temp_row, column]
-            if token != player:
-                in_a_row = 0            # reset count if not player token
-            else:
-                in_a_row += 1           # increment count and check for win
-                if in_a_row == 4:
-                    return 1
-        # check diagonals from bottom to top
-        # left
-        in_a_row = 0
-        diag1 = StartingCoords(row + min((5-row), column), column - min((5-row), column))           # will always find the bottom left coordinate as one coordinate is zero by definition
-        for r, c in zip(range(diag1.row, -1, -1), range(diag1.column, 7)):
-            token = self.internal[r, c]
-            if token != player:
-                in_a_row = 0            # reset count if not player token
-            else:
-                in_a_row += 1           # increment count and check for win
-                if in_a_row == 4:
-                    return 1
+    return traced_func
 
-        # right
-        in_a_row = 0
-        diag2 = StartingCoords(row + min((5-row), (6-column)), column + min((5-row), (6-column)))         # find the lower right corner of the x
-        for r, c in zip(range(diag2.row, -1, -1), range(diag2.column, -1, -1)):
-            token = self.internal[r, c]
-            if token != player:
-                in_a_row = 0            # reset count if not player token
-            else:
-                in_a_row += 1           # increment count and check for win
-                if in_a_row == 4:
-                    return 1
 
-        # make sure board is not drawn
-        if np.all(self.internal):           # if all things are filled and no winning state, return 2 because drawn
-            return 2
-        return 0
+def draw_board(game_state: GameState, screen: pygame.display, first_draw: bool = False) -> None:
+    """This function draws the game board
 
-    def display_most_recent_token(self, player):
-        '''This function displays the most recently dropped token
-        
-        Args:
-            player (int): the player number 1 or 2
-        '''
-        # find the center of the circle
-        x_center = 50 + 100*self.most_recent_drop[1]
-        y_center = 50 + 100*self.most_recent_drop[0]
-        # yellowish for player 1 and reddish for player 2
-        color = [250, 255, 92] if player == 1 else [230, 69, 69]
-        # draw the circle
-        pygame.draw.circle(self.screen, color, (x_center, y_center), 45)
-
-    def copy(self):
-        to_return = Board(self.screen)
-        to_return.internal = np.copy(self.internal)
-        to_return.drop_idx = self.drop_idx[:]
-        to_return.most_recent_drop = self.most_recent_drop
-
-        return to_return
-
-    @classmethod
-    def from_list(cls, l, screen):
-        '''This fucntion takes in a list and returns a Board object whos internal array represents the reshaped list
-        
-        Args:
-            l (list): the list to be reshaped
-        
-        Returns:
-            Board: the board object
-        '''
-        to_return = cls(screen)
-        to_return.internal = np.array(l).reshape(6,7)
-        return to_return
-
-def draw_board(rows, columns, square_size, screen):
-    '''This function draws the connect4 board to set up the game
-    
     Args:
-        rows (int): the number of rows to draw
-        columns (int): the number of columns to draw
-        square_size (int): the size of a square
-        screen (pygame.Screen): a pygame screen
-    '''
-    # draw the matrix
-    for c in range(columns):
-        for r in range(rows):
-            # set up a rectange
-            rect = pygame.Rect(c*square_size, r*square_size, (c+1)*square_size, (r+1)*square_size)
-            pygame.draw.rect(screen, [69, 69, 69], rect)
-            # this is an ugly draw statement that draws a black circle in the middle of each square
-            pygame.draw.circle(screen, [0, 0, 0], (int((c*square_size) + (square_size/2)), int((r*square_size) + (square_size/2))), (square_size/2 - 5))
+        game_state (GameState): this object contains all the information needed to rebuild the game state
+        screen (pygame.screen): the screen on which to draw the information
+        first_draw (bool, optional): is this the first draw or not?
+    """
+    # draw an empty board if it is the first time
+    if first_draw:
+        for c in range(7):
+            for r in range(6):
+                # set up a rectangle
+                rect = pygame.Rect(c * 100, r * 100, (c + 1) * 100, (r + 1) * 100)
+                pygame.draw.rect(screen, [69, 69, 69], rect)
+                # this is an ugly draw statement that draws a black circle in the middle of each square
+                pygame.draw.circle(screen, [0, 0, 0], (int((c * 100) + 50), int((r * 100) + 50)), 45)
 
-def drop_token(board, column, player):
-    '''This function serves as an intermediary between the game loop and the board object.
-    
+    # every time get the bitboards for each player
+    bboard_1, bboard_2 = game_state.bitboards
+
+    # draw the tokens for each player in the correct location if the corresponding bit is high
+    for idx, position in enumerate(reversed(bboard_1.binary_array)):
+        if position == 1:
+            row = idx % 7  # modulo gets the row
+            column = idx // 7  # integer division gets the column
+            draw_token(screen, row, column, 1)
+
+    for idx, position in enumerate(reversed(bboard_2.binary_array)):
+        if position == 1:
+            row = idx % 7  # modulo gets the row
+            column = idx // 7  # integer division gets the column
+            draw_token(screen, row, column, 2)
+
+
+def draw_token(screen: pygame.display, row: int, column: int, player: int) -> None:
+    """This function draws a player token.
+
     Args:
-        board (Board): the Board object on which the game is being played
+        screen (pygame.screen): the screen on which to draw
+        row (int): the row in which to drop the token
         column (int): the column into which to drop the token
         player (int): the plays whose turn it is
-    
+    """
+    # find the center of the circle
+    x_center = 50 + 100 * column
+    y_center = 50 + 100 * row
+
+    # yellowish for player 1 and reddish for player 2
+    color = [250, 255, 92] if player == 1 else [230, 69, 69]
+
+    # draw the circle
+    pygame.draw.circle(screen, color, (x_center, y_center), 45)
+
+
+@cache
+def negamax(game_state: GameState, alpha: int, beta: int):
+    """This function strongly solves the game connect four
+
+    Args:
+        alpha (int): the lower bound used for pruning
+        beta (int): the upper bound used for pruning
+        game_state (GameState): the current game state
+
     Returns:
-        int: the final board state. (-1 for failed drop. 0 for continue game and 1 for game over)
-    '''
-    board_state = board.drop(column, player)
-    # if the token didn't drop
-    if board_state == -1:
-        return -1
-    
-    # this only happens if token successfully dropped
-    board.display_most_recent_token(player)
-    # check for win
-    if board_state == 1:
-        print(f'Player {player} won!')
-        return 1
-    elif board_state == 2:
-        print(f'Drawn')
-        return 1
-    else:
+        int: the evaluation for the position
+    """
+    # check for draw
+    p1_moves = game_state.bboard_1.num_tokens_dropped
+    p2_moves = game_state.bboard_2.num_tokens_dropped
+    nb_moves = p1_moves + p2_moves
+    if nb_moves == 42:
         return 0
 
-def minimax(player, board_obj, depth, alpha, beta):
-    # get evaluation
-    evaluation = evaluate(board_obj.internal)
-    # base cases
-    if depth == 0 or abs(evaluation) > 100:             # depth reached or win
-        return (-1, evaluation)
+    # check for win next move
+    if game_state.current_player_can_win():
+        return (43 - nb_moves) // 2
 
-    if board_obj.internal.sum() == 63:                      # this total score can only be reached via equal numbers 1 and 2 in a drawn board state
-        return (-1, 0)
+    # call recursively
+    best_score = (41 - nb_moves) // 2
+    if beta > best_score:
+        beta = best_score
+        if alpha >= beta:
+            return beta
 
-    # not base case
-    # get all possible moves
-    candidate_moves = board_obj.candidate_moves()
-    candidate_moves.sort(key=lambda column: abs(column-3))      # this will check centermost columns first which should boost performance of alpha-beta
+    for col in range(7):
+        if game_state.valid_drop(col):
+            child_game_state = game_state.clone()
+            child_game_state.drop(col)
+            score = -1 * negamax(child_game_state, (-1 * alpha), (-1 * beta))
+            if score >= beta:
+                return score
+            if score > alpha:
+                alpha = score
 
-    # sort to get closest to center
+    return alpha
 
-    # evaluate
-    best_column = -1
-    best_eval = -1000 if player == 1 else 1000
-    for candidate_move in candidate_moves:
-        candidate_board = board_obj.copy()
-        candidate_board.drop(candidate_move, player)                         # make the move
-        # check the cache
-        _, child_eval = minimax(player=3-player, board_obj=candidate_board, depth=depth-1, alpha=alpha, beta=beta)      # evaluate resulting position assuming best play
 
-        # update the best variables based on either the maximizing (p1) or minimizing behavior (p2)
-        if player == 1:
-            # check for better move
-            if child_eval > best_eval:
-                best_eval = child_eval
-                best_column = candidate_move
+negamax = trace(negamax)
 
-            # check for pruning
-            if best_eval >= beta:
-                # cache the board as a break
-                break
 
-            # update alpha
-            alpha = max(alpha, best_eval)
+def ai_move(game_state: GameState) -> int:
+    """This function calculates the best move for the AI
 
-        elif player == 2:
-            # check for better move
-            if child_eval < best_eval:
-                best_eval = child_eval
-                best_column = candidate_move
+    Args:
+        game_state (GameState): the current game state
 
-            # check for pruning
-            if best_eval <= alpha:
-                # cache the board as a break
-                break
+    Returns:
+        int: the best column to drop a token
+    """
+    score_column = {}
+    for col in range(7):
+        if game_state.valid_drop(col):
+            child_game_state = game_state.clone()
+            child_game_state.drop(col)
+            score = negamax(child_game_state, -100, 100)
 
-            # update beta
-            beta = min(beta, best_eval)
+            score_column[col] = score
 
-    return (best_column, best_eval)
+    print(f'{score_column = }')
+    if game_state.current_turn == 1:  # maximizer
+        best_col = max(score_column, key=score_column.get)
+        # best_col = list(score_column.keys())[list(score_column.values()).index(max_key)]
+    else:
+        best_col = min(score_column, key=score_column.get)
+        # best_col = list(score_column.keys())[list(score_column.values()).index(min_key)]
+
+    return best_col
+
 
 def main():
-    # setting up constants and pygame
+    # set up pygame
     pygame.init()
+    screen = pygame.display.set_mode((700, 600))
 
-    total = 3 # used to toggle between players
-    square_size = 100
-    columns = 7
-    rows = 6
-    size = (columns*square_size, rows*square_size)
-    screen = pygame.display.set_mode(size)
-    board = Board(screen)
+    # set up objects
+    game_state = GameState()
 
     # draw the board
-    draw_board(rows, columns, square_size, screen)
+    draw_board(game_state, screen, first_draw=True)
 
     # run pygame
-    player = 1
     game_over = False
     while not game_over:
-        # if ai turn, play as ai
-        if player in AI_TURNS:
-            # drop a token
-            drop_column, _ = minimax(player, board, depth=6, alpha=-9999, beta=9999)
-            drop_result = drop_token(board, drop_column, player)
-
-            # evaluate the outcome of the drop
-            if drop_result == 0:                    # successful drop but not a win
-                player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
-
-            elif drop_result == 1:                  # successful drop and a win/
-                game_over = True
-            else:                                   # this will happen if invalid drop (-1) returned from drop_token
-                continue
-
-
         # check for events
         for event in pygame.event.get():
             # exit
@@ -294,24 +192,50 @@ def main():
 
             # player clicked
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if player not in AI_TURNS:                                  # make sure the player should be playing
-                    # try to drop token
-                    drop_column = math.trunc(event.pos[0]/100)
-                    drop_result = drop_token(board, drop_column, player)
+                # try to drop token
+                if game_state.current_turn == 1:
+                    drop_column = math.trunc(event.pos[0] / 100)
+                    dropped = game_state.drop(drop_column)
 
-                    if drop_result == 0:                          # successful drop and no win
-                        player = total - player                         # if 1, 3-1 -> 2 and if 2 then 3-2 -> 1
+                    if dropped:
+                        # redraw the player tokens
+                        draw_board(game_state, screen)
+                        # check for game end
+                        end = game_state.end()
+                        if end == 1:  # player one victory
+                            print('Player 1 won!')
+                            game_over = True
+                        elif end == 2:  # player two victory
+                            print('Player 2 won!')
+                            game_over = True
+                        elif end == 0:  # draw
+                            print('Draw...')
+                            game_over = True
+                        else:  # game not over
+                            pass
+                            # print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
+        if game_state.current_turn == 2:
+            ai_col = ai_move(game_state)
+            game_state.drop(ai_col)
+            draw_board(game_state, screen)
+            end = game_state.end()
+            if end == 1:  # player one victory
+                print('Player 1 won!')
+                game_over = True
+            elif end == 2:  # player two victory
+                print('Player 2 won!')
+                game_over = True
+            elif end == 0:  # draw
+                print('Draw...')
+                game_over = True
+            else:  # game not over
+                pass
 
-                    elif drop_result == 1:                        # successful drop and win/draw
-                        game_over = True
-
-                    else:                                         # this will happen if invalid drop (-1) returned from drop_token
-                        continue
-
-        pygame.display.flip()           # update display
+        pygame.display.flip()  # update display
     # once game over sleep for a bit then quit
     time.sleep(1)
     sys.exit()
+
 
 if __name__ == '__main__':
     main()
