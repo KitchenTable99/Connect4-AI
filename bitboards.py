@@ -1,6 +1,6 @@
 # this is the python file for bitboards
 
-from typing import List
+from typing import List, Tuple
 
 
 class BitBoard:
@@ -74,6 +74,12 @@ class BitBoard:
         else:
             return False
 
+    def clone(self) -> 'BitBoard':
+        to_return = BitBoard()
+        to_return.internal = self.internal
+
+        return to_return
+
     @property
     def binary_array(self) -> List[int]:
         """This function returns an 49-bit representation of the number of the bitboard in binary as an array
@@ -100,12 +106,6 @@ class BitBoard:
             set_bits += 1
 
         return set_bits
-
-    def clone(self) -> 'BitBoard':
-        to_return = BitBoard()
-        to_return.internal = self.internal
-
-        return to_return
 
     def __str__(self) -> str:
         # setup variables
@@ -144,7 +144,7 @@ class GameState:
         self.top_row_by_column = [5 for _ in range(7)]
 
     @property
-    def bitboards(self):
+    def bitboards(self) -> Tuple[BitBoard, BitBoard]:
         """This function is used to extract both bitboards from this object
 
         Returns:
