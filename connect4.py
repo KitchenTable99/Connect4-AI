@@ -8,6 +8,7 @@ import math
 import pygame
 from functools import wraps, cache
 from bitboards import GameState
+from typing import Optional
 
 
 # decorator to trace execution of recursive function
@@ -96,6 +97,45 @@ def draw_token(screen: pygame.display, row: int, column: int, player: int) -> No
 
 
 @cache
+def alphabeta(node: GameState, alpha: int, beta: int, maximizing_player: bool, depth: int) -> int:
+    # print(f'depth > 40 : {depth > 40}')
+    # check for draw
+    p1_moves: int = node.bboard_1.num_tokens_dropped
+    p2_moves: int = node.bboard_2.num_tokens_dropped
+    nb_moves: int = p1_moves + p2_moves
+    if nb_moves == 42:
+        return 0
+
+    # check for win next move
+    if node.current_player_can_win():
+        return (43 - nb_moves) // 2
+
+    # run for maximizing player
+    if maximizing_player:
+        value: int = -999999
+        for column in range(7):
+            child: GameState = node.clone()
+            if not child.drop(column):
+                continue  # not a valid drop
+            value = max(value, alphabeta(child, alpha, beta, False, depth + 1))
+            if value >= beta:
+                break  # beta cutoff
+            alpha = max(alpha, value)
+        return value
+    else:
+        value: int = 999999
+        for column in range(7):
+            child: GameState = node.clone()
+            if not child.drop(column):
+                continue  # not a valid drop
+            value = min(value, alphabeta(child, alpha, beta, True, depth + 1))
+            if value <= alpha:
+                break  # alpha cutoff
+            beta = min(beta, value)
+        return value
+
+
+@cache
 def negamax(game_state: GameState, alpha: int, beta: int):
     """This function strongly solves the game connect four
 
@@ -138,7 +178,7 @@ def negamax(game_state: GameState, alpha: int, beta: int):
     return alpha
 
 
-negamax = trace(negamax)
+alphabeta = trace(alphabeta)
 
 
 def ai_move(game_state: GameState) -> int:
@@ -150,16 +190,22 @@ def ai_move(game_state: GameState) -> int:
     Returns:
         int: the best column to drop a token
     """
+    # check to see if win possible
+    if column := game_state.current_player_can_win():
+        return column
+    # check to see if opponent win possible
     score_column = {}
     for col in range(7):
+        print(f'{col = }')
         if game_state.valid_drop(col):
             child_game_state = game_state.clone()
             child_game_state.drop(col)
-            score = negamax(child_game_state, -100, 100)
+            maximizing_player = True if game_state.current_turn == 1 else False
+            score = alphabeta(child_game_state, -100, 100, maximizing_player, 0)
 
             score_column[col] = score
 
-    print(f'{score_column = }')
+    # print(f'{score_column = }')
     if game_state.current_turn == 1:  # maximizer
         best_col = max(score_column, key=score_column.get)
         # best_col = list(score_column.keys())[list(score_column.values()).index(max_key)]
@@ -170,6 +216,24 @@ def ai_move(game_state: GameState) -> int:
     return best_col
 
 
+def read_board_string(board_info: str) -> Optional[GameState]:
+    """This function reads in a string and return the gamestate corresponding to those moves
+
+    Args:
+        board_info (str): the string with column numbers
+
+    Returns:
+        GameState: the game state object or a NoneType object
+    """
+    to_return: GameState = GameState()
+    for char in board_info:
+        successful_drop: bool = to_return.drop(int(char))
+        if not successful_drop:
+            return None
+
+    return to_return
+
+
 def main():
     # set up pygame
     pygame.init()
@@ -177,6 +241,7 @@ def main():
 
     # set up objects
     game_state = GameState()
+    # game_state = read_board_string('333333241022122000004111656566')
 
     # draw the board
     draw_board(game_state, screen, first_draw=True)

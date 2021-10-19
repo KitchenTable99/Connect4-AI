@@ -1,6 +1,6 @@
 # this is the python file for bitboards
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 
 class BitBoard:
@@ -48,7 +48,7 @@ class BitBoard:
         else:
             return False
 
-    def win_this_move(self, rows: List[int]) -> bool:
+    def win_this_move(self, rows: List[int]) -> Optional[int]:
         """This function will drop a token into each row and then check for a win.
 
         Args:
@@ -70,9 +70,9 @@ class BitBoard:
             win_present = self.check_win()
             self.internal -= drop_num
             if win_present:
-                return True
+                return column
         else:
-            return False
+            return None
 
     def clone(self) -> 'BitBoard':
         to_return = BitBoard()
@@ -199,13 +199,13 @@ class GameState:
             return 1
         elif self.bboard_2.check_win():
             return 2
-        elif (self.bboard_1.internal | self.bboard_2.internal) == 562949953421311:  # this bitwise or operation
+        elif (self.bboard_1.num_tokens_dropped + self.bboard_2.num_tokens_dropped) == 42:  # this bitwise or operation
             # will light up the full 49 bits if there is a token everywhere
             return 0
         else:
             return -1
 
-    def current_player_can_win(self) -> bool:
+    def current_player_can_win(self) -> Optional[int]:
         """This function checks if the current player can win
 
         Returns:
@@ -233,8 +233,8 @@ def test():
     bboard.drop(0, 0)
     bboard.drop(1, 0)
     bboard.drop(2, 0)
-    print(f'{bboard.win_this_move([3,5,5,5,5,5,5]) = }')
-    print(bboard)
+    game_state = GameState()
+    # print(f'{bboard.win_this_move([3,5,5,5,5,5,5]) = }')
 
 
 if __name__ == '__main__':
