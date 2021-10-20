@@ -1,6 +1,6 @@
 # this is the python file for bitboards
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 
 class BitBoard:
@@ -251,6 +251,73 @@ class GameState:
         return True
 
 
+class AlphaBetaAnalyzer:
+
+    game_state: GameState
+    alpha: int
+    beta: int
+    transposition_table: Dict[GameState, int]
+
+    def __init__(self, game_state: GameState):
+        self.game_state = game_state
+        self.alpha = -100
+        self.beta = 100
+        self.transposition_table = {}
+
+    def set_game_state(self, new_state: GameState) -> None:
+        self.game_state = new_state
+
+    def alpha_beta(self) -> Tuple[int, Optional[int]]:
+        # check for draw
+        p1_moves: int = self.game_state.bboard_1.num_tokens_dropped
+        p2_moves: int = self.game_state.bboard_2.num_tokens_dropped
+        nb_moves: int = p1_moves + p2_moves
+        if nb_moves == 42:
+            return 0, None
+
+        # check for win next move
+        if self.game_state.current_player_can_win():
+            return (43 - nb_moves) // 2, None
+
+        # run for maximizing player
+        maximizing_player = True if self.game_state.current_turn == 1 else False
+        if maximizing_player:
+            value: int = -999999
+            column: int = -1
+            for column in range(7):
+                clone: GameState = self.game_state.clone()
+                if not self.game_state.drop(column):
+                    continue  # not a valid drop
+                ab_value, ab_column = self.alpha_beta()
+                if ab_value > value:
+                    value = ab_value
+                    column = ab_column
+                if value >= self.beta:
+                    break  # beta cutoff
+                self.alpha = max(self.alpha, value)
+                self.set_game_state(clone)
+            return value, column
+        else:
+            value: int = 999999
+            column: int = -1
+            for column in range(7):
+                clone: GameState = self.game_state.clone()
+                if not self.game_state.drop(column):
+                    continue  # not a valid drop
+                ab_value, ab_column = self.alpha_beta()
+                if ab_value < value:
+                    print('here')
+                    value = ab_value
+                    column = ab_column
+                if value <= self.alpha:
+                    break  # alpha cutoff
+                self.beta = min(self.beta, value)
+                self.set_game_state(clone)
+            return value, column
+
+    def best_column(self) -> int:
+        _, column = self.alpha_beta()
+        return column
 
 def test():
     bboard = BitBoard()

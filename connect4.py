@@ -7,7 +7,7 @@ import time
 import math
 import pygame
 from functools import wraps, cache
-from bitboards import GameState
+from helper_classes import GameState, AlphaBetaAnalyzer
 from typing import Optional, Tuple
 
 
@@ -96,79 +96,6 @@ def draw_token(screen: pygame.display, row: int, column: int, player: int) -> No
     pygame.draw.circle(screen, color, (x_center, y_center), 45)
 
 
-def alphabeta(node: GameState, alpha: int, beta: int, maximizing_player: bool, depth: int) -> int:
-    # check for draw
-    p1_moves: int = node.bboard_1.num_tokens_dropped
-    p2_moves: int = node.bboard_2.num_tokens_dropped
-    nb_moves: int = p1_moves + p2_moves
-    if nb_moves == 42:
-        return 0
-
-    # check for win next move
-    if node.current_player_can_win():
-        return (43 - nb_moves) // 2
-
-    # run for maximizing player
-    if maximizing_player:
-        value: int = -999999
-        for column in range(7):
-            child: GameState = node.clone()
-            if not child.drop(column):
-                continue  # not a valid drop
-            value = max(value, alphabeta(child, alpha, beta, False, depth + 1))
-            if value >= beta:
-                break  # beta cutoff
-            alpha = max(alpha, value)
-        return value
-    else:
-        value: int = 999999
-        for column in range(7):
-            child: GameState = node.clone()
-            if not child.drop(column):
-                continue  # not a valid drop
-            value = min(value, alphabeta(child, alpha, beta, True, depth + 1))
-            if value <= alpha:
-                break  # alpha cutoff
-            beta = min(beta, value)
-        return value
-
-# alphabeta = trace(alphabeta)
-
-
-def ai_move(game_state: GameState) -> int:
-    """This function calculates the best move for the AI
-
-    Args:
-        game_state (GameState): the current game state
-
-    Returns:
-        int: the best column to drop a token
-    """
-    # check to see if win possible
-    if column := game_state.current_player_can_win():
-        return column
-    # check to see if opponent win possible
-    score_column = {}
-    for col in range(7):
-        # print(f'{col = }')
-        if game_state.valid_drop(col):
-            child_game_state = game_state.clone()
-            child_game_state.drop(col)
-            maximizing_player = True if game_state.current_turn == 1 else False
-            score = alphabeta(child_game_state, -100, 100, maximizing_player, 0)
-
-            score_column[col] = score
-
-    if game_state.current_turn == 1:  # maximizer
-        best_col = max(score_column, key=score_column.get)
-        # best_col = list(score_column.keys())[list(score_column.values()).index(max_key)]
-    else:
-        best_col = min(score_column, key=score_column.get)
-        # best_col = list(score_column.keys())[list(score_column.values()).index(min_key)]
-
-    return best_col
-
-
 def read_board_string(board_info: str) -> Optional[GameState]:
     """This function reads in a string and return the gamestate corresponding to those moves
 
@@ -193,8 +120,8 @@ def main():
     screen = pygame.display.set_mode((700, 600))
 
     # set up objects
-    game_state = GameState()
-    # game_state = read_board_string('33333324102212200000411165656612665454')
+    # game_state = GameState()
+    game_state = read_board_string('33333324102212200000411165656612665454')
 
     # draw the board
     draw_board(game_state, screen, first_draw=True)
@@ -233,7 +160,8 @@ def main():
                             pass
                             # print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
         if game_state.current_turn == 2:
-            ai_col = ai_move(game_state)
+            ab_analyzer = AlphaBetaAnalyzer(game_state)
+            ai_col = ab_analyzer.best_column()
             game_state.drop(ai_col)
             draw_board(game_state, screen)
             end = game_state.end()
