@@ -1,6 +1,7 @@
 # this is the python file for bitboards
 
 from typing import List, Tuple, Optional, Dict
+from collections import Counter
 
 
 class BitBoard:
@@ -233,6 +234,15 @@ class GameState:
 
         return to_return
 
+    @property
+    def last_token(self) -> int:
+        c = Counter(self.top_row_by_column)
+        if c[-1] != 6:
+            raise Exception('last_column can only be called when there is one token left to place')
+        else:
+            return list(c.keys())[-1]           # if there are the values -1 and one other number strictly greater
+                                                # than -1, the last value will always be the final column
+
     def __hash__(self) -> int:
         return hash((self.bboard_1, self.bboard_2, self.current_turn, tuple(self.top_row_by_column)))
 
@@ -267,20 +277,23 @@ class AlphaBetaAnalyzer:
     def set_game_state(self, new_state: GameState) -> None:
         self.game_state = new_state
 
-    def alpha_beta(self) -> Tuple[int, Optional[int]]:
-        # check for draw
+    def alpha_beta(self) -> Tuple[int, int]:
+        # check for win next move
         p1_moves: int = self.game_state.bboard_1.num_tokens_dropped
         p2_moves: int = self.game_state.bboard_2.num_tokens_dropped
         nb_moves: int = p1_moves + p2_moves
-        if nb_moves == 42:
-            return 0, None
+        maximizing_player = True if self.game_state.current_turn == 1 else False
+        if column := self.game_state.current_player_can_win():
+            if maximizing_player:
+                return 21 - p1_moves, column
+            else:
+                return -1 * (21-p2_moves), column
 
-        # check for win next move
-        if self.game_state.current_player_can_win():
-            return (43 - nb_moves) // 2, None
+        # check for draw next move
+        if nb_moves == 41:
+            return 0, self.game_state.last_token
 
         # run for maximizing player
-        maximizing_player = True if self.game_state.current_turn == 1 else False
         if maximizing_player:
             value: int = -999999
             column: int = -1
@@ -291,7 +304,7 @@ class AlphaBetaAnalyzer:
                 ab_value, ab_column = self.alpha_beta()
                 if ab_value > value:
                     value = ab_value
-                    column = ab_column
+                    column = ab_column or column
                 if value >= self.beta:
                     break  # beta cutoff
                 self.alpha = max(self.alpha, value)
@@ -306,9 +319,8 @@ class AlphaBetaAnalyzer:
                     continue  # not a valid drop
                 ab_value, ab_column = self.alpha_beta()
                 if ab_value < value:
-                    print('here')
                     value = ab_value
-                    column = ab_column
+                    column = ab_column or column
                 if value <= self.alpha:
                     break  # alpha cutoff
                 self.beta = min(self.beta, value)

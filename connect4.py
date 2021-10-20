@@ -6,9 +6,9 @@ import sys
 import time
 import math
 import pygame
-from functools import wraps, cache
+from functools import wraps
 from helper_classes import GameState, AlphaBetaAnalyzer
-from typing import Optional, Tuple
+from typing import Optional
 
 
 # decorator to trace execution of recursive function
@@ -39,6 +39,9 @@ def trace(func):
         return result
 
     return traced_func
+
+
+# helper_classes.AlphaBetaAnalyzer.alpha_beta = trace(helper_classes.AlphaBetaAnalyzer.alpha_beta)
 
 
 def draw_board(game_state: GameState, screen: pygame.display, first_draw: bool = False) -> None:
@@ -121,7 +124,8 @@ def main():
 
     # set up objects
     # game_state = GameState()
-    game_state = read_board_string('33333324102212200000411165656612665454')
+    # game_state = read_board_string('33333324102212200000411165656612665454')
+    game_state = read_board_string('3333332410221220000041116565')
 
     # draw the board
     draw_board(game_state, screen, first_draw=True)
@@ -162,6 +166,7 @@ def main():
         if game_state.current_turn == 2:
             ab_analyzer = AlphaBetaAnalyzer(game_state)
             ai_col = ab_analyzer.best_column()
+            print(f'{ai_col = }')
             game_state.drop(ai_col)
             draw_board(game_state, screen)
             end = game_state.end()
