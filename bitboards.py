@@ -127,6 +127,12 @@ class BitBoard:
 
         return to_return[:-1]  # don't return the last \n
 
+    def __hash__(self) -> int:
+        return hash(self.internal)
+
+    def __eq__(self, other) -> bool:
+        return self.internal == other.internal
+
 
 class GameState:
 
@@ -226,6 +232,24 @@ class GameState:
         to_return.top_row_by_column = self.top_row_by_column[:]
 
         return to_return
+
+    def __hash__(self) -> int:
+        return hash((self.bboard_1, self.bboard_2, self.current_turn, tuple(self.top_row_by_column)))
+
+    def __eq__(self, other: 'GameState') -> bool:
+        if not isinstance(other, GameState):
+            return False
+        if self.bboard_1 != other.bboard_1:
+            return False
+        if self.bboard_2 != other.bboard_2:
+            return False
+        if self.current_turn != other.current_turn:
+            return False
+        if self.top_row_by_column != other.top_row_by_column:
+            return False
+
+        return True
+
 
 
 def test():

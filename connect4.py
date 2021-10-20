@@ -8,7 +8,7 @@ import math
 import pygame
 from functools import wraps, cache
 from bitboards import GameState
-from typing import Optional
+from typing import Optional, Tuple
 
 
 # decorator to trace execution of recursive function
@@ -96,9 +96,7 @@ def draw_token(screen: pygame.display, row: int, column: int, player: int) -> No
     pygame.draw.circle(screen, color, (x_center, y_center), 45)
 
 
-@cache
 def alphabeta(node: GameState, alpha: int, beta: int, maximizing_player: bool, depth: int) -> int:
-    # print(f'depth > 40 : {depth > 40}')
     # check for draw
     p1_moves: int = node.bboard_1.num_tokens_dropped
     p2_moves: int = node.bboard_2.num_tokens_dropped
@@ -134,51 +132,7 @@ def alphabeta(node: GameState, alpha: int, beta: int, maximizing_player: bool, d
             beta = min(beta, value)
         return value
 
-
-@cache
-def negamax(game_state: GameState, alpha: int, beta: int):
-    """This function strongly solves the game connect four
-
-    Args:
-        alpha (int): the lower bound used for pruning
-        beta (int): the upper bound used for pruning
-        game_state (GameState): the current game state
-
-    Returns:
-        int: the evaluation for the position
-    """
-    # check for draw
-    p1_moves = game_state.bboard_1.num_tokens_dropped
-    p2_moves = game_state.bboard_2.num_tokens_dropped
-    nb_moves = p1_moves + p2_moves
-    if nb_moves == 42:
-        return 0
-
-    # check for win next move
-    if game_state.current_player_can_win():
-        return (43 - nb_moves) // 2
-
-    # call recursively
-    best_score = (41 - nb_moves) // 2
-    if beta > best_score:
-        beta = best_score
-        if alpha >= beta:
-            return beta
-
-    for col in range(7):
-        if game_state.valid_drop(col):
-            child_game_state = game_state.clone()
-            child_game_state.drop(col)
-            score = -1 * negamax(child_game_state, (-1 * alpha), (-1 * beta))
-            if score >= beta:
-                return score
-            if score > alpha:
-                alpha = score
-
-    return alpha
-
-
-alphabeta = trace(alphabeta)
+# alphabeta = trace(alphabeta)
 
 
 def ai_move(game_state: GameState) -> int:
@@ -196,7 +150,7 @@ def ai_move(game_state: GameState) -> int:
     # check to see if opponent win possible
     score_column = {}
     for col in range(7):
-        print(f'{col = }')
+        # print(f'{col = }')
         if game_state.valid_drop(col):
             child_game_state = game_state.clone()
             child_game_state.drop(col)
@@ -205,7 +159,6 @@ def ai_move(game_state: GameState) -> int:
 
             score_column[col] = score
 
-    # print(f'{score_column = }')
     if game_state.current_turn == 1:  # maximizer
         best_col = max(score_column, key=score_column.get)
         # best_col = list(score_column.keys())[list(score_column.values()).index(max_key)]
@@ -241,7 +194,7 @@ def main():
 
     # set up objects
     game_state = GameState()
-    # game_state = read_board_string('333333241022122000004111656566')
+    # game_state = read_board_string('33333324102212200000411165656612665454')
 
     # draw the board
     draw_board(game_state, screen, first_draw=True)
