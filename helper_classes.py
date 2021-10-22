@@ -274,63 +274,69 @@ class AlphaBetaAnalyzer:
         self.beta = 100
         self.transposition_table = {}
 
-    def set_game_state(self, new_state: GameState) -> None:
-        self.game_state = new_state
-
-    def alpha_beta(self) -> Tuple[int, int]:
+    def alpha_beta(self, game_state: GameState) -> Tuple[int, int]:
         # check for win next move
-        p1_moves: int = self.game_state.bboard_1.num_tokens_dropped
-        p2_moves: int = self.game_state.bboard_2.num_tokens_dropped
+        p1_moves: int = game_state.bboard_1.num_tokens_dropped
+        p2_moves: int = game_state.bboard_2.num_tokens_dropped
         nb_moves: int = p1_moves + p2_moves
-        maximizing_player = True if self.game_state.current_turn == 1 else False
-        if column := self.game_state.current_player_can_win():
+        print(f'{nb_moves = }')
+        maximizing_player = True if game_state.current_turn == 1 else False
+        if drop_col := game_state.current_player_can_win():
             if maximizing_player:
-                return 21 - p1_moves, column
+                return 21 - p1_moves, drop_col
             else:
-                return -1 * (21-p2_moves), column
+                return -1 * (21-p2_moves), drop_col
 
         # check for draw next move
         if nb_moves == 41:
-            return 0, self.game_state.last_token
+            return 0, game_state.last_token
 
         # run for maximizing player
         if maximizing_player:
             value: int = -999999
             column: int = -1
-            for column in range(7):
-                clone: GameState = self.game_state.clone()
-                if not self.game_state.drop(column):
+            for drop_col in range(7):
+                child: GameState = game_state.clone()
+                if not child.drop(drop_col):
                     continue  # not a valid drop
-                ab_value, ab_column = self.alpha_beta()
+                ab_value, ab_column = self.alpha_beta(child)
                 if ab_value > value:
                     value = ab_value
-                    column = ab_column or column
+                    column = ab_column
                 if value >= self.beta:
                     break  # beta cutoff
                 self.alpha = max(self.alpha, value)
-                self.set_game_state(clone)
             return value, column
         else:
             value: int = 999999
             column: int = -1
-            for column in range(7):
-                clone: GameState = self.game_state.clone()
-                if not self.game_state.drop(column):
+            for drop_col in range(7):
+                child: GameState = game_state.clone()
+                if not child.drop(drop_col):
                     continue  # not a valid drop
-                ab_value, ab_column = self.alpha_beta()
+                ab_value, ab_column = self.alpha_beta(child)
                 if ab_value < value:
                     value = ab_value
-                    column = ab_column or column
+                    column = ab_column
                 if value <= self.alpha:
                     break  # alpha cutoff
                 self.beta = min(self.beta, value)
-                self.set_game_state(clone)
             return value, column
 
     def best_column(self) -> int:
-        _, column = self.alpha_beta()
-        return column
+        # check for win on current move
+        if column := self.game_state.current_player_can_win():
+            return column
 
+        # check for opponent win on next move
+        throwaway: GameState = self.game_state.clone()
+        throwaway.current_turn = 3 - throwaway.current_turn
+        if column := throwaway.current_player_can_win():
+            return column
+
+        # then run alpha_beta
+        _, column = self.alpha_beta(self.game_state)
+        return column
 def test():
     bboard = BitBoard()
     bboard.drop(0, 0)
