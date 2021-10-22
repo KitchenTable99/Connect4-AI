@@ -235,13 +235,14 @@ class GameState:
         return to_return
 
     @property
-    def last_token(self) -> int:
+    def last_token(self) -> Optional[int]:
         c = Counter(self.top_row_by_column)
         if c[-1] != 6:
             raise Exception('last_column can only be called when there is one token left to place')
         else:
-            return list(c.keys())[-1]           # if there are the values -1 and one other number strictly greater
-                                                # than -1, the last value will always be the final column
+            keys_list: List[int] = list(c.keys())
+            proper_row: int = keys_list[-1]
+            return keys_list.index(proper_row)
 
     def __hash__(self) -> int:
         return hash((self.bboard_1, self.bboard_2, self.current_turn, tuple(self.top_row_by_column)))
@@ -266,7 +267,7 @@ class AlphaBetaAnalyzer:
     game_state: GameState
     alpha: int
     beta: int
-    transposition_table: Dict[GameState, int]
+    transposition_table: Dict[GameState, Tuple[int, int]]
 
     def __init__(self, game_state: GameState):
         self.game_state = game_state
@@ -279,48 +280,77 @@ class AlphaBetaAnalyzer:
         p1_moves: int = game_state.bboard_1.num_tokens_dropped
         p2_moves: int = game_state.bboard_2.num_tokens_dropped
         nb_moves: int = p1_moves + p2_moves
-        print(f'{nb_moves = }')
         maximizing_player = True if game_state.current_turn == 1 else False
         if drop_col := game_state.current_player_can_win():
             if maximizing_player:
-                return 21 - p1_moves, drop_col
+                evaluation: int = 21 - p1_moves
+                self.transposition_table[game_state] = (evaluation, drop_col)
+                return evaluation, drop_col
             else:
-                return -1 * (21-p2_moves), drop_col
+                evaluation: int = -1 * (21 - p1_moves)
+                self.transposition_table[game_state] = (evaluation, drop_col)
+                return evaluation, drop_col
 
         # check for draw next move
         if nb_moves == 41:
-            return 0, game_state.last_token
+            evaluation: Tuple[int, int] = (0, game_state.last_token)
+            self.transposition_table[game_state] = evaluation
+            return evaluation
 
         # run for maximizing player
         if maximizing_player:
             value: int = -999999
             column: int = -1
             for drop_col in range(7):
+                # clone game_state and test column
                 child: GameState = game_state.clone()
                 if not child.drop(drop_col):
                     continue  # not a valid drop
-                ab_value, ab_column = self.alpha_beta(child)
+
+                # check to see if node already evaluated
+                if lookup := self.transposition_table.get(child):
+                    ab_value, ab_column = lookup
+                else:
+                    ab_value, ab_column = self.alpha_beta(child)
+
+                # deal with evaluation
                 if ab_value > value:
                     value = ab_value
                     column = ab_column
                 if value >= self.beta:
                     break  # beta cutoff
                 self.alpha = max(self.alpha, value)
+
+                # store in transposition table
+                if not lookup:
+                    self.transposition_table[game_state] = (value, column)
             return value, column
         else:
             value: int = 999999
             column: int = -1
             for drop_col in range(7):
+                # duplicate game_state and check for valid drop
                 child: GameState = game_state.clone()
                 if not child.drop(drop_col):
                     continue  # not a valid drop
-                ab_value, ab_column = self.alpha_beta(child)
+
+                # get evaluation of node
+                if lookup := self.transposition_table.get(child):
+                    ab_value, ab_column = lookup
+                else:
+                    ab_value, ab_column = self.alpha_beta(child)
+
+                # deal with evaluation
                 if ab_value < value:
                     value = ab_value
                     column = ab_column
                 if value <= self.alpha:
                     break  # alpha cutoff
                 self.beta = min(self.beta, value)
+
+                # store
+                if not lookup:
+                    self.transposition_table[game_state] = (value, column)
             return value, column
 
     def best_column(self) -> int:
@@ -337,6 +367,8 @@ class AlphaBetaAnalyzer:
         # then run alpha_beta
         _, column = self.alpha_beta(self.game_state)
         return column
+
+
 def test():
     bboard = BitBoard()
     bboard.drop(0, 0)

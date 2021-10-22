@@ -125,9 +125,8 @@ def main():
     # set up objects
     # game_state = GameState()
     # game_state = read_board_string('33333324102212200000411165656612665454')
-    # game_state = read_board_string('3333332410221220000041116565')
-    game_state = read_board_string('33333320')
-
+    game_state = read_board_string('3333332410221220000041116565')
+    # game_state = read_board_string('33333320')
 
     # draw the board
     draw_board(game_state, screen, first_draw=True)
@@ -155,13 +154,13 @@ def main():
                         end = game_state.end()
                         if end == 1:  # player one victory
                             print('Player 1 won!')
-                            game_over = True
+                            break
                         elif end == 2:  # player two victory
                             print('Player 2 won!')
-                            game_over = True
+                            break
                         elif end == 0:  # draw
                             print('Draw...')
-                            game_over = True
+                            break
                         else:  # game not over
                             pass
                             # print(f'if player 1: {game_state.bboard_1.win_this_move(game_state.top_row_by_column)}\nif player 2: {game_state.bboard_2.win_this_move(game_state.top_row_by_column)}')
@@ -174,13 +173,13 @@ def main():
             end = game_state.end()
             if end == 1:  # player one victory
                 print('Player 1 won!')
-                game_over = True
+                break
             elif end == 2:  # player two victory
                 print('Player 2 won!')
-                game_over = True
+                break
             elif end == 0:  # draw
                 print('Draw...')
-                game_over = True
+                break
             else:  # game not over
                 pass
 
