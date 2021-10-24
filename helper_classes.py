@@ -1,15 +1,57 @@
 # this is the python file for bitboards
-
+import sys
 from typing import List, Tuple, Optional, Dict
 from collections import Counter
+import pickle
+
+dump_game_states = []
+
+
+def dump_game_state(f):
+    def wrapper(*args, **kwargs):
+        # write args[-1]
+        dump_game_states.append(args[-1])
+        if len(dump_game_states) >= 500:
+            with open('game_states.pickle', 'wb') as fp:
+                pickle.dump(dump_game_states, fp)
+            sys.exit()
+        return f(*args, **kwargs)
+
+    return wrapper
 
 
 class BitBoard:
-
     internal: int
 
     def __init__(self):
         self.internal = 0
+
+    @property
+    def binary_array(self) -> List[int]:
+        """This function returns an 49-bit representation of the number of the bitboard in binary as an array
+
+        Returns:
+            list: [0/1, 0/1, ... , 0/1]
+        """
+        binary_string = format(self.internal, '049b')
+        return [int(num) for num in binary_string]
+
+    @property
+    def num_tokens_dropped(self) -> int:
+        """This function uses Brian Kernighan's algorithm to return the number of set bits in the internal field.
+        This represents the number of dropped tokens
+
+        Returns:
+            int: the number of dropped tokens
+        """
+        # set up variables for Brian Kernighan's algorithm
+        internal_copy: int = self.internal
+        set_bits: int = 0
+        while internal_copy != 0:
+            internal_copy = internal_copy & (internal_copy - 1)
+            set_bits += 1
+
+        return set_bits
 
     def drop(self, row: int, column: int) -> None:
         """This function increments the internal counter by lighting up the bit that needs to be high in order for
@@ -76,37 +118,15 @@ class BitBoard:
             return None
 
     def clone(self) -> 'BitBoard':
+        """This function clones the BitBoard
+
+        Returns:
+            to_return (BitBoard): the cloned object
+        """
         to_return = BitBoard()
         to_return.internal = self.internal
 
         return to_return
-
-    @property
-    def binary_array(self) -> List[int]:
-        """This function returns an 49-bit representation of the number of the bitboard in binary as an array
-
-        Returns:
-            list: [0/1, 0/1, ... , 0/1]
-        """
-        binary_string = format(self.internal, '049b')
-        return [int(num) for num in binary_string]
-
-    @property
-    def num_tokens_dropped(self) -> int:
-        """This function uses Brian Kernighan's algorithm to return the number of set bits in the internal field.
-        This represents the number of dropped tokens
-
-        Returns:
-            int: the number of dropped tokens
-        """
-        # set up variables for Brian Kernighan's algorithm
-        internal_copy: int = self.internal
-        set_bits: int = 0
-        while internal_copy != 0:
-            internal_copy = internal_copy & (internal_copy - 1)
-            set_bits += 1
-
-        return set_bits
 
     def __str__(self) -> str:
         # setup variables
@@ -136,7 +156,6 @@ class BitBoard:
 
 
 class GameState:
-
     bboard_1: BitBoard
     bboard_2: BitBoard
     current_turn: int
@@ -159,8 +178,26 @@ class GameState:
         """
         return self.bboard_1, self.bboard_2
 
+    @property
+    def total_moves(self) -> int:
+        return self.bboard_1.num_tokens_dropped + self.bboard_2.num_tokens_dropped
+
+    @property
+    def valid_columns(self) -> List[int]:
+        return [idx for idx, value in enumerate(self.top_row_by_column) if value >= 0]
+
+    @property
+    def last_token(self) -> Optional[int]:
+        c = Counter(self.top_row_by_column)
+        if c[-1] != 6:
+            raise Exception('last_column can only be called when there is one token left to place')
+        else:
+            keys_list: List[int] = list(c.keys())
+            proper_row: int = keys_list[-1]
+            return keys_list.index(proper_row)
+
     def valid_drop(self, column: int) -> bool:
-        """Helper function so that this functionality is exposed for the negamax function
+        """Helper function so that this functionality is exposed for the minimax function
 
         Args:
             column (int): the column to check for validity
@@ -206,8 +243,7 @@ class GameState:
             return 1
         elif self.bboard_2.check_win():
             return 2
-        elif (self.bboard_1.num_tokens_dropped + self.bboard_2.num_tokens_dropped) == 42:  # this bitwise or operation
-            # will light up the full 49 bits if there is a token everywhere
+        elif self.total_moves == 42:
             return 0
         else:
             return -1
@@ -226,6 +262,11 @@ class GameState:
         return possible
 
     def clone(self) -> 'GameState':
+        """This function clones the GameState object
+
+        Returns:
+            to_return (GameState): the cloned object
+        """
         to_return = GameState()
         to_return.bboard_1 = self.bboard_1.clone()
         to_return.bboard_2 = self.bboard_2.clone()
@@ -233,16 +274,6 @@ class GameState:
         to_return.top_row_by_column = self.top_row_by_column[:]
 
         return to_return
-
-    @property
-    def last_token(self) -> Optional[int]:
-        c = Counter(self.top_row_by_column)
-        if c[-1] != 6:
-            raise Exception('last_column can only be called when there is one token left to place')
-        else:
-            keys_list: List[int] = list(c.keys())
-            proper_row: int = keys_list[-1]
-            return keys_list.index(proper_row)
 
     def __hash__(self) -> int:
         return hash((self.bboard_1, self.bboard_2, self.current_turn, tuple(self.top_row_by_column)))
@@ -263,7 +294,6 @@ class GameState:
 
 
 class AlphaBetaAnalyzer:
-
     game_state: GameState
     alpha: int
     beta: int
@@ -275,7 +305,16 @@ class AlphaBetaAnalyzer:
         self.beta = 100
         self.transposition_table = {}
 
+    @dump_game_state
     def alpha_beta(self, game_state: GameState) -> Tuple[int, int]:
+        """This function uses the mini-max algorithm to determine the best column
+
+        Args:
+            game_state (GameState): the current game state from which to begin the analysis
+
+        Returns:
+            value, column (Tuple[int, int]): the evaluation of the position and the column that results in the best column
+        """
         # check for win next move
         p1_moves: int = game_state.bboard_1.num_tokens_dropped
         p2_moves: int = game_state.bboard_2.num_tokens_dropped
@@ -301,11 +340,10 @@ class AlphaBetaAnalyzer:
         if maximizing_player:
             value: int = -999999
             column: int = -1
-            for drop_col in range(7):
+            for drop_col in game_state.valid_columns:
                 # clone game_state and test column
                 child: GameState = game_state.clone()
-                if not child.drop(drop_col):
-                    continue  # not a valid drop
+                child.drop(drop_col)
 
                 # check to see if node already evaluated
                 if lookup := self.transposition_table.get(child):
@@ -328,11 +366,10 @@ class AlphaBetaAnalyzer:
         else:
             value: int = 999999
             column: int = -1
-            for drop_col in range(7):
+            for drop_col in game_state.valid_columns:
                 # duplicate game_state and check for valid drop
                 child: GameState = game_state.clone()
-                if not child.drop(drop_col):
-                    continue  # not a valid drop
+                child.drop(drop_col)
 
                 # get evaluation of node
                 if lookup := self.transposition_table.get(child):
@@ -354,6 +391,11 @@ class AlphaBetaAnalyzer:
             return value, column
 
     def best_column(self) -> int:
+        """This function uses the mini-max algorithm to determine the best column
+
+        Returns:
+            column (int): the evaluation of the position and the column that results in the best column
+        """
         # check for win on current move
         if column := self.game_state.current_player_can_win():
             return column

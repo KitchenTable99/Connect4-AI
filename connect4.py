@@ -1,7 +1,7 @@
 # This script will just be a visual game of Connect 4
 # Author: Caleb Bitting
 # Date: 05/25/2021
-
+import pickle
 import sys
 import time
 import math
@@ -188,6 +188,48 @@ def main():
     time.sleep(1)
     sys.exit()
 
+def debug():
+    # set up pygame
+    pygame.init()
+    screen = pygame.display.set_mode((700, 600))
+    current_state = 0
+
+    # set up objects
+    with open('game_states.pickle', 'rb') as fp:
+        game_states = pickle.load(fp)
+    game_state = game_states[current_state]
+
+    # draw the board
+    draw_board(game_state, screen, first_draw=True)
+
+    # run pygame
+    while True:
+        # check for events
+        for event in pygame.event.get():
+            # exit
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+            # player clicked
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_n:
+                    current_state += 1
+                    if current_state == len(game_states):
+                        print('Out of game states')
+                        current_state = len(game_states) - 1
+                if event.key == pygame.K_b:
+                    current_state -= 1
+                    current_state = max(current_state, 0)
+                game_state = game_states[current_state]
+                draw_board(game_state, screen, first_draw=True)
+
+        pygame.display.flip()  # update display
+    # once game over sleep for a bit then quit
+    time.sleep(1)
+    sys.exit()
+
+
 
 if __name__ == '__main__':
-    main()
+    debug()
+    # main()
